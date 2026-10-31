@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d6282f">
+<meta name="description" content="A festive caller for Christmas Bingo: draw all 30 character-and-number calls and check for winners.">
+<title>Christmas Bingo Caller</title>
+<link rel="icon" type="image/png" href="images/tree.png">
+<style>
+  :root {
+    --ink: #1c130d;
+    --paper: #fffdf6;
+    --cream: #fbf0d9;
+    --zebra: #fff4dd;
+    --red: #d6282f;
+    --red-deep: #a3121a;
+    --red-soft: #ffe0de;
+    --green: #17663f;
+    --green-deep: #0c3b26;
+    --green-bright: #2f9a5c;
+    --gold: #f7c534;
+    --gold-soft: #fde6ad;
+    --tag: #ffe27a;
+    --muted: #6d5d50;
+    --focus: #1747d1;
+
+    --bw: 3px;
+    --radius: 14px;
+    --shadow: 5px 5px 0 var(--ink);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  html.modal-open, html.modal-open body { overflow: hidden; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    background-color: var(--cream);
+    background-image:
+      radial-gradient(circle, rgb(23 102 63 / .11) 0 1.6px, transparent 2.2px),
+      radial-gradient(circle, rgb(214 40 47 / .10) 0 1.6px, transparent 2.2px);
+    background-size: 30px 30px;
+    background-position: 0 0, 15px 15px;
+    color: var(--ink);
+    font: 16px/1.45 var(--font);
+  }
+
+  img { max-width: 100%; }
+  h1, h2, p { margin: 0; }
+
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- String of lights ---------- */
+  .lights {
+    height: 24px;
+    background:
+      radial-gradient(5px 7px at 50% 15px, var(--red) 0 96%, transparent) 0 0 / 72px 24px repeat-x,
+      radial-gradient(5px 7px at 50% 15px, var(--green-bright) 0 96%, transparent) 24px 0 / 72px 24px repeat-x,
+      radial-gradient(5px 7px at 50% 15px, var(--gold) 0 96%, transparent) 48px 0 / 72px 24px repeat-x,
+      radial-gradient(7px 9px at 50% 15px, var(--ink) 0 96%, transparent) 0 0 / 24px 24px repeat-x,
+      linear-gradient(90deg, transparent 9px, var(--ink) 9px 15px, transparent 15px) 0 4px / 24px 5px repeat-x,
+      linear-gradient(var(--ink), var(--ink)) 0 4px / 100% 2px no-repeat;
+  }
+
+  /* ---------- Page frame ---------- */
+  .app {
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: 8px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .panel {
+    background: var(--paper);
+    border: var(--bw) solid var(--ink);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- Header ---------- */
+  .title { line-height: 1; }
+  .title__kicker {
+    display: inline-block;
+    margin-bottom: 5px;
+    padding: 4px 8px 3px;
+    background: var(--red);
+    color: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: 2px 2px 0 var(--ink);
+    font: 900 .72rem/1 var(--font-display);
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    rotate: -3deg;
+  }
+  .title__main {
+    display: block;
+    font: 900 clamp(1.35rem, 6.8vw, 2.1rem)/.95 var(--font-display);
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--red);
+  }
+
+  /* ---------- Bingo boards (compact + enlarged share these rules) ---------- */
+  .board { overflow: hidden; }
+  .bingo {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: center;
+  }
+  .bingo th, .bingo td { padding: 0; }
+  .bingo th {
+    padding: 5px 2px 4px;
+    background: var(--gold-soft);
+    border-bottom: var(--bw) solid var(--ink);
+    vertical-align: bottom;
+  }
+  .bingo th + th, .bingo td + td { border-left: 2px solid var(--ink); }
+  .bingo td { vertical-align: middle; background: #fff; }
+  .bingo td:nth-child(even) { background: var(--zebra); }
+  .bingo tbody tr + tr td { border-top: 1.5px dashed rgb(28 19 13 / .2); }
+  .bingo th img {
+    display: block;
+    margin: 0 auto;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+
+  .num {
+    display: inline-grid;
+    place-items: center;
+    width: var(--ring);
+    height: var(--ring);
+    border: var(--ring-w) solid transparent;
+    border-radius: 50%;
+    color: var(--muted);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .is-called .num {
+    border-color: var(--red);
+    background: var(--red-soft);
+    color: var(--red-deep);
+    font-weight: 900;
+  }
+
+  .bingo--compact {
+    --ring: 1.7em;
+    --ring-w: 2.5px;
+    font: 600 15px/1 var(--font-display);
+  }
+  .bingo--compact th img { width: 38px; width: clamp(30px, min(10vw, 5.4svh), 44px); }
+  .bingo--compact td { height: 27px; height: clamp(25px, 4.1svh, 36px); }
+  .bingo--compact .is-new .num { animation: stamp .45s cubic-bezier(.2, .9, .3, 1.3) both; }
+
+  @keyframes stamp {
+    0%   { scale: 2.2; rotate: -25deg; opacity: 0; }
+    60%  { scale: .9;  rotate: 4deg;   opacity: 1; }
+    100% { scale: 1;   rotate: 0deg; }
+  }
+
+  .bingo--large {
+    --ring: 1.8em;
+    --ring-w: 4px;
+    font: 600 26px/1 var(--font-display);
+    font-size: clamp(20px, min(7.2vw, 6.4dvh), 40px);
+  }
+  .bingo--large th { padding: 7px 2px 6px; }
+  .bingo--large th img { width: 48px; width: clamp(34px, min(12vw, 8dvh), 72px); }
+  .bingo--large td { height: 60px; height: clamp(46px, calc((100dvh - 270px) / 6), 96px); }
+  .bingo__name {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    font: 900 .7rem/1.1 var(--font-display);
+    font-size: clamp(.55rem, 2.5vw, .8rem);
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 62px;
+    padding: 9px 10px;
+    border: var(--bw) solid var(--ink);
+    border-radius: var(--radius);
+    box-shadow: 4px 4px 0 var(--ink);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: translate .08s ease, box-shadow .08s ease, filter .2s ease, opacity .2s ease;
+  }
+  .btn:focus-visible { outline-offset: 5px; }
+  .btn:active:not(:disabled):not([aria-disabled="true"]) {
+    translate: 3px 3px;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .btn__label {
+    position: relative;
+    display: inline-block;
+    padding: 6px 11px;
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 9px;
+    box-shadow: 2px 2px 0 var(--ink);
+    font: 900 1rem/1.1 var(--font-display);
+    font-size: clamp(.84rem, 3.9vw, 1.05rem);
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* Next Roll: candy cane */
+  .btn--candy {
+    background-color: #fff;
+    background-image: linear-gradient(135deg, var(--red) 25%, transparent 25% 50%, var(--red) 50% 75%, transparent 75%);
+    background-size: 34px 34px;
+  }
+  .btn--candy .btn__label { color: var(--red-deep); }
+  .btn--candy.is-rolling { animation: candy-spin .55s linear infinite; cursor: progress; }
+  @keyframes candy-spin { to { background-position: 34px 0; } }
+
+  /* Check for Winner: green-and-yellow wrapping paper with ribbon and gift tag */
+  .btn--wrap {
+    background-color: var(--green);
+    background-image:
+      linear-gradient(180deg, transparent calc(50% - 8px), var(--ink) 0 calc(50% - 6px), var(--gold) 0 calc(50% + 6px), var(--ink) 0 calc(50% + 8px), transparent 0),
+      linear-gradient(90deg, transparent 16px, var(--ink) 0 18px, var(--gold) 0 30px, var(--ink) 0 32px, transparent 0),
+      radial-gradient(circle, var(--gold) 0 3px, transparent 3.6px),
+      radial-gradient(circle, #ffe9a0 0 1.8px, transparent 2.4px);
+    background-size: 100% 100%, 100% 100%, 18px 18px, 18px 18px;
+    background-position: 0 0, 0 0, 0 0, 9px 9px;
+  }
+  .btn--wrap .btn__label { background: var(--tag); }
+
+  /* New Game: snowy evergreen forest */
+  .btn--forest {
+    background-color: #123f30;
+    background-image:
+      conic-gradient(from 150deg at 50% 0, #2f8a57 0 60deg, transparent 0),
+      conic-gradient(from 150deg at 50% 0, #1f6a45 0 60deg, transparent 0),
+      radial-gradient(circle, #fff 0 1.4px, transparent 2px),
+      radial-gradient(circle, rgb(255 255 255 / .75) 0 1px, transparent 1.6px);
+    background-size: 20px 22px, 27px 30px, 17px 15px, 23px 19px;
+    background-position: 0 100%, 9px 100%, 0 0, 8px 6px;
+    background-repeat: repeat-x, repeat-x, repeat, repeat;
+  }
+  .btn--forest .btn__label { color: var(--green-deep); }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    filter: grayscale(1);
+    opacity: .7;
+    translate: 2px 2px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .btn[aria-disabled="true"]:not(.is-rolling) {
+    cursor: progress;
+    filter: saturate(.35);
+    opacity: .8;
+  }
+
+  .btn--big { min-height: 76px; max-width: 20rem; }
+  .btn--big .btn__label { padding: 9px 22px; font-size: 1.35rem; }
+
+  /* Stretch-and-squash on press */
+  .is-squish { animation: squish .42s ease-out; }
+  @keyframes squish {
+    0%   { scale: 1 1; }
+    25%  { scale: 1.07 .86; }
+    55%  { scale: .96 1.07; }
+    80%  { scale: 1.02 .98; }
+    100% { scale: 1 1; }
+  }
+
+  /* ---------- Welcome ---------- */
+  .welcome {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 22px 18px 24px;
+    text-align: center;
+  }
+  .cast { display: flex; justify-content: center; padding-block: 4px; }
+  .cast img {
+    width: 56px;
+    width: clamp(48px, 15vw, 72px);
+    height: auto;
+    aspect-ratio: 1;
+    margin-inline: -4px;
+    padding: 6px;
+    object-fit: contain;
+    background: #fff;
+    border: var(--bw) solid var(--ink);
+    border-radius: 50%;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .cast img:nth-child(1) { rotate: -9deg; }
+  .cast img:nth-child(2) { rotate: 6deg; translate: 0 6px; }
+  .cast img:nth-child(3) { rotate: -4deg; }
+  .cast img:nth-child(4) { rotate: 8deg; translate: 0 6px; }
+  .cast img:nth-child(5) { rotate: -6deg; }
+  .welcome__title {
+    font: 900 clamp(1.5rem, 7.5vw, 2rem)/1.05 var(--font-display);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--gold);
+  }
+  .welcome__lead { max-width: 26rem; color: #3a2c22; }
+  .steps {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    max-width: 24rem;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    text-align: left;
+  }
+  .steps li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    font-size: .95rem;
+    line-height: 1.3;
+  }
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    background: var(--red);
+    color: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    font: 900 .95rem/1 var(--font-display);
+  }
+
+  /* ---------- Play area ---------- */
+  .game { display: flex; flex-direction: column; gap: 16px; }
+  .play {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-areas: "controls result";
+    gap: 12px;
+  }
+  .controls { grid-area: controls; display: grid; grid-auto-rows: 1fr; gap: 10px; }
+
+  /* Smallest phones: keep everything on one screen by tightening rather than stacking,
+     so Next Roll never falls below the fold. */
+  @media (max-width: 349.98px) {
+    .app { padding-inline: 12px; }
+    .play { gap: 10px; }
+    .btn { min-height: 56px; padding-inline: 6px; }
+    .btn__label { padding-inline: 7px; font-size: .8rem; }
+  }
+
+  /* ---------- Current result ---------- */
+  .result {
+    grid-area: result;
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .result__tab {
+    align-self: flex-start;
+    padding: 7px 11px 6px;
+    background: var(--red);
+    color: #fff;
+    border-right: var(--bw) solid var(--ink);
+    border-bottom: var(--bw) solid var(--ink);
+    border-radius: 0 0 10px 0;
+    font: 900 .78rem/1 var(--font-display);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .result__stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 10px 8px 14px;
+  }
+  .result__visual { display: flex; align-items: flex-end; }
+
+  .result__tile {
+    position: relative;
+    flex: none;
+    width: 96px;
+    width: min(60cqi, 140px);
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #fff;
+    border: var(--bw) solid var(--ink);
+    border-radius: 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .result__burst {
+    position: absolute;
+    inset: -30%;
+    background: repeating-conic-gradient(var(--gold-soft) 0 10deg, #fff 10deg 20deg);
+    opacity: 0;
+    scale: .6;
+    transition: opacity .3s ease, scale .45s cubic-bezier(.2, .9, .3, 1.2);
+  }
+  .result.has-result .result__burst { opacity: 1; scale: 1; }
+  .result__img {
+    position: absolute;
+    inset: 8%;
+    width: 84%;
+    height: 84%;
+    object-fit: contain;
+  }
+  .result__placeholder {
+    position: absolute;
+    inset: 10%;
+    display: grid;
+    place-items: center;
+    border: 2.5px dashed rgb(28 19 13 / .35);
+    border-radius: 10px;
+    color: var(--gold);
+  }
+  .result__placeholder svg { width: 46%; height: 46%; }
+  .result:not(.is-empty) .result__placeholder { display: none; }
+
+  /* The number sits in a Christmas-ornament "bingo ball" */
+  .ball {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 66px;
+    width: min(40cqi, 96px);
+    aspect-ratio: 1;
+    margin-left: -20px;
+    margin-left: calc(min(40cqi, 96px) * -.3);
+    margin-bottom: -8px;
+    background: radial-gradient(circle at 32% 28%, #fff 0 16%, var(--paper) 17%);
+    border: var(--bw) solid var(--ink);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 7px var(--red), 3px 3px 0 var(--ink);
+  }
+  .ball::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 32%;
+    height: 11px;
+    translate: -50% 0;
+    background: var(--gold);
+    border: 2.5px solid var(--ink);
+    border-radius: 3px;
+  }
+  .ball__num {
+    font: 900 34px/1 var(--font-display);
+    font-size: min(20cqi, 48px);
+    font-variant-numeric: tabular-nums;
+  }
+  .result.is-empty .ball__num { color: var(--muted); }
+  .result.is-rolling .ball { animation: wobble .3s ease-in-out infinite alternate; }
+  @keyframes wobble { from { rotate: -7deg; } to { rotate: 7deg; } }
+
+  .result__name {
+    max-width: 100%;
+    padding: 5px 11px 4px;
+    background: var(--green);
+    color: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 var(--ink);
+    font: 900 1rem/1.1 var(--font-display);
+    font-size: clamp(.8rem, 9cqi, 1.15rem);
+    letter-spacing: .06em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .result.is-empty .result__name { visibility: hidden; }
+  .result.is-rolling .result__name { background: var(--tag); color: var(--ink); }
+
+  /* ---------- All-called banner ---------- */
+  .done {
+    position: relative;
+    padding: 14px 40px;
+    background: var(--tag);
+    border: var(--bw) solid var(--ink);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .done::before, .done::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    translate: 0 -50%;
+    background: var(--red);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  .done::before { left: 12px; rotate: -12deg; }
+  .done::after { right: 12px; rotate: 12deg; }
+  .done__title {
+    color: var(--red-deep);
+    font: 900 1.4rem/1.1 var(--font-display);
+    text-transform: uppercase;
+  }
+  .done__text { margin-top: 4px; font-size: .95rem; line-height: 1.35; }
+
+  /* ---------- Modals ---------- */
+  .modal {
+    width: min(40rem, 100% - 20px);
+    max-width: none;
+    max-height: none;
+    margin: auto;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+  }
+  .modal--confirm { width: min(26rem, 100% - 28px); }
+  .modal::backdrop { background: rgb(9 33 22 / .74); }
+  .modal__box {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow: hidden;
+    background: var(--paper);
+    border: var(--bw) solid var(--ink);
+    border-radius: 18px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .modal[open] .modal__box { animation: pop-in .24s cubic-bezier(.2, .9, .3, 1.2) both; }
+  @keyframes pop-in { from { scale: .9; opacity: 0; } }
+
+  .modal__head {
+    --focus: #fff;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 10px 10px 16px;
+    background: radial-gradient(circle, rgb(255 255 255 / .22) 0 1.5px, transparent 2px) 0 0 / 16px 16px, var(--green-deep);
+    color: #fff;
+    border-bottom: var(--bw) solid var(--ink);
+  }
+  .modal__head--alert { background: var(--red); padding-block: 14px; }
+  .modal__title {
+    font: 900 1.25rem/1.1 var(--font-display);
+    letter-spacing: .02em;
+    text-transform: uppercase;
+  }
+  .modal__body {
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 12px;
+  }
+
+  .xbtn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-left: auto;
+    padding: 0;
+    background: #fff;
+    color: var(--ink);
+    border: var(--bw) solid var(--ink);
+    border-radius: 10px;
+    box-shadow: 3px 3px 0 #000;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .xbtn svg { width: 22px; height: 22px; }
+  .xbtn:active { translate: 2px 2px; box-shadow: 1px 1px 0 #000; }
+
+  .check-board {
+    overflow: hidden;
+    background: #fff;
+    border: var(--bw) solid var(--ink);
+    border-radius: 12px;
+  }
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: .9rem;
+    font-weight: 700;
+  }
+  .legend .num { --ring: 1.9em; --ring-w: 2.5px; font: 900 .95rem/1 var(--font-display); }
+
+  .modal--confirm .modal__body { padding: 16px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .pbtn {
+    flex: 1 1 9rem;
+    min-height: 52px;
+    padding: 10px 14px;
+    border: var(--bw) solid var(--ink);
+    border-radius: 12px;
+    font: 900 1rem/1.15 var(--font-display);
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: translate .08s ease, box-shadow .08s ease;
+  }
+  .pbtn:focus-visible { outline-offset: 4px; }
+  .pbtn--safe { background: var(--green); color: #fff; box-shadow: 4px 4px 0 var(--ink); }
+  .pbtn--danger { background: #fff; color: var(--red-deep); box-shadow: 2px 2px 0 var(--ink); }
+  .pbtn:active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
+
+  .noscript { margin: 24px 16px; font-weight: 700; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="lights" aria-hidden="true"></div>
+
+<div class="app">
+  <header>
+    <h1 class="title">
+      <span class="title__kicker">Christmas</span>
+      <span class="title__main">Bingo Caller</span>
+    </h1>
+  </header>
+
+  <main>
+    <section class="welcome panel" id="welcome" aria-labelledby="welcome-heading" hidden>
+      <div class="cast" id="cast" aria-hidden="true"></div>
+      <h2 class="welcome__title" id="welcome-heading">Ready, set, jingle!</h2>
+      <p class="welcome__lead">Five Christmas characters, numbers 1 to 6: thirty calls in all, and each one comes up exactly once per game.</p>
+      <button type="button" class="btn btn--candy btn--big" id="btn-start"><span class="btn__label">Start Game</span></button>
+      <ol class="steps" role="list" aria-label="How to play">
+        <li><span>Tap <strong>Next Roll</strong> and read the call out loud.</span></li>
+        <li><span>Every call is circled in red on the board.</span></li>
+        <li><span>Someone shouts “Bingo!”? Tap <strong>Check for Winner</strong>.</span></li>
+      </ol>
+    </section>
+
+    <div class="game" id="game" hidden>
+      <section class="panel board" aria-labelledby="board-heading">
+        <h2 class="sr-only" id="board-heading">Bingo board</h2>
+        <table class="bingo bingo--compact" id="board-compact"></table>
+      </section>
+
+      <div class="play">
+        <div class="controls" role="group" aria-label="Caller controls">
+          <button type="button" class="btn btn--candy" id="btn-roll"><span class="btn__label" id="roll-label">Next Roll</span></button>
+          <button type="button" class="btn btn--wrap" id="btn-check" aria-haspopup="dialog"><span class="btn__label">Check for Winner</span></button>
+          <button type="button" class="btn btn--forest" id="btn-new" aria-haspopup="dialog"><span class="btn__label">New Game</span></button>
+        </div>
+
+        <section class="result panel is-empty" id="result" aria-labelledby="result-heading">
+          <h2 class="result__tab" id="result-heading">Now Calling</h2>
+          <div class="result__stage">
+            <div class="result__visual">
+              <div class="result__tile" id="result-tile" aria-hidden="true">
+                <div class="result__burst"></div>
+                <div class="result__placeholder">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="#1c130d" stroke-width="1.5" stroke-linejoin="round" d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z"/></svg>
+                </div>
+              </div>
+              <div class="ball" id="result-ball"><span class="ball__num" id="result-num">?</span></div>
+            </div>
+            <p class="result__name" id="result-name">&nbsp;</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="done" id="done" hidden>
+        <p class="done__title">That’s a wrap!</p>
+        <p class="done__text">All 30 combinations have been called. Tap <strong>Check for Winner</strong> to confirm a Bingo, or start a <strong>New Game</strong>.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<p class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></p>
+
+<dialog class="modal" id="dlg-check" aria-labelledby="check-heading">
+  <div class="modal__box">
+    <header class="modal__head">
+      <h2 class="modal__title" id="check-heading">Check for Winner</h2>
+      <button type="button" class="xbtn" data-close autofocus aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal__body">
+      <div class="check-board">
+        <table class="bingo bingo--large" id="board-large"></table>
+      </div>
+      <p class="legend"><span class="is-called" aria-hidden="true"><span class="num">7</span></span> Circled in red = called</p>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="modal modal--confirm" id="dlg-confirm" role="alertdialog" aria-labelledby="confirm-heading">
+  <div class="modal__box">
+    <header class="modal__head modal__head--alert">
+      <h2 class="modal__title" id="confirm-heading">Are you sure?</h2>
+    </header>
+    <div class="modal__body">
+      <div class="actions">
+        <button type="button" class="pbtn pbtn--safe" data-close autofocus>Cancel</button>
+        <button type="button" class="pbtn pbtn--danger" id="btn-confirm-new">Start New Game</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<noscript><p class="noscript">Christmas Bingo Caller needs JavaScript turned on.</p></noscript>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Game data ----------
+  const STORAGE_KEY = 'christmas-bingo-caller';
+  const STATE_VERSION = 1;
+  const CATEGORIES = [
+    { id: 'elf', name: 'Elf', src: 'images/elf.png' },
+    { id: 'present', name: 'Present', src: 'images/present.png' },
+    { id: 'rudolph', name: 'Rudolph', src: 'images/rudolph.png' },
+    { id: 'snowman', name: 'Snowman', src: 'images/snowman.png' },
+    { id: 'tree', name: 'Tree', src: 'images/tree.png' },
+  ];
+  const NUMBERS = [1, 2, 3, 4, 5, 6];
+  // All 30 combinations, with ids like "snowman-4".
+  const COMBOS = CATEGORIES.flatMap(cat => NUMBERS.map(num => ({ id: `${cat.id}-${num}`, cat, num })));
+  const COMBO_BY_ID = new Map(COMBOS.map(combo => [combo.id, combo]));
+  const TOTAL = COMBOS.length;
+
+  // Roll animation timing in ms. Purely visual: the result is chosen before it starts.
+  const IMAGE_LANDS_AT = 850;
+  const NUMBER_LANDS_AT = 1400;
+  const SETTLE_DELAY = 300;
+  const REDUCED_MOTION_DELAY = 350;
+
+  // ---------- Game logic (no DOM) ----------
+  // A game is { version, drawn: [comboId, ...] } in call order; the last entry is the current result.
+  function createGame() {
+    return { version: STATE_VERSION, drawn: [] };
+  }
+
+  function remainingIds(game) {
+    const drawn = new Set(game.drawn);
+    return COMBOS.filter(combo => !drawn.has(combo.id)).map(combo => combo.id);
+  }
+
+  function isComplete(game) {
+    return game.drawn.length >= TOTAL;
+  }
+
+  // Uniform integer in [0, n). Rejection sampling avoids modulo bias.
+  function randomIndex(n) {
+    const cryptoApi = window.crypto;
+    if (cryptoApi && cryptoApi.getRandomValues) {
+      const limit = Math.floor(0x100000000 / n) * n;
+      const buf = new Uint32Array(1);
+      do { cryptoApi.getRandomValues(buf); } while (buf[0] >= limit);
+      return buf[0] % n;
+    }
+    return Math.floor(Math.random() * n);
+  }
+
+  // Picks one remaining combination uniformly at random and records it as drawn.
+  function drawCombination(game) {
+    const pool = remainingIds(game);
+    if (pool.length === 0) return null;
+    const id = pool[randomIndex(pool.length)];
+    game.drawn.push(id);
+    return id;
+  }
+
+  function isValidGame(data) {
+    return !!data && typeof data === 'object'
+      && data.version === STATE_VERSION
+      && Array.isArray(data.drawn)
+      && data.drawn.length <= TOTAL
+      && data.drawn.every(id => typeof id === 'string' && COMBO_BY_ID.has(id))
+      && new Set(data.drawn).size === data.drawn.length;
+  }
+
+  // ---------- Storage ----------
+  // Returns { status: 'none' } when no game was ever started in this tab,
+  // { status: 'ok', game } for a usable save, or { status: 'invalid' } for malformed/outdated data.
+  function loadGame() {
+    let raw;
+    try {
+      raw = window.sessionStorage.getItem(STORAGE_KEY);
+    } catch (err) {
+      return { status: 'none' };
+    }
+    if (raw === null) return { status: 'none' };
+    try {
+      const data = JSON.parse(raw);
+      if (isValidGame(data)) return { status: 'ok', game: { version: STATE_VERSION, drawn: data.drawn.slice() } };
+    } catch (err) { /* fall through to invalid */ }
+    return { status: 'invalid' };
+  }
+
+  function saveGame(game) {
+    try {
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(game));
+    } catch (err) {
+      // Storage unavailable or full: the game keeps working in memory for this page view.
+    }
+  }
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const ui = {
+    welcome: $('welcome'),
+    game: $('game'),
+    cast: $('cast'),
+    btnStart: $('btn-start'),
+    btnRoll: $('btn-roll'),
+    rollLabel: $('roll-label'),
+    btnCheck: $('btn-check'),
+    btnNew: $('btn-new'),
+    result: $('result'),
+    resultTab: $('result-heading'),
+    resultTile: $('result-tile'),
+    resultName: $('result-name'),
+    ball: $('result-ball'),
+    ballNum: $('result-num'),
+    done: $('done'),
+    announcer: $('announcer'),
+    dlgCheck: $('dlg-check'),
+    dlgConfirm: $('dlg-confirm'),
+    btnConfirmNew: $('btn-confirm-new'),
+  };
+
+  const motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const reducedMotion = () => !!(motionQuery && motionQuery.matches);
+
+  let game = null;        // persisted state; null until a game is started
+  let roll = null;        // in-flight roll { id, timers }; never persisted
+  let stampedCell = null; // compact-board cell playing the "just called" stamp
+  let returnFocusTo = null;
+  let announceTimer = 0;
+
+  function makeImg(cat, alt, className) {
+    const img = document.createElement('img');
+    img.src = cat.src;
+    img.alt = alt;
+    img.width = 64;
+    img.height = 64;
+    if (className) img.className = className;
+    return img;
+  }
+
+  // Builds a five-column board and returns Map(comboId -> { td, status }).
+  function buildBoard(table, large) {
+    const cells = new Map();
+    const caption = table.createCaption();
+    caption.className = 'sr-only';
+    caption.textContent = 'Bingo board. Called numbers are circled in red.';
+
+    const headRow = table.createTHead().insertRow();
+    for (const cat of CATEGORIES) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.append(makeImg(cat, large ? '' : cat.name));
+      if (large) {
+        const name = document.createElement('span');
+        name.className = 'bingo__name';
+        name.textContent = cat.name;
+        th.append(name);
+      }
+      headRow.append(th);
+    }
+
+    const body = table.createTBody();
+    for (const num of NUMBERS) {
+      const tr = body.insertRow();
+      for (const cat of CATEGORIES) {
+        const td = tr.insertCell();
+        const mark = document.createElement('span');
+        mark.className = 'num';
+        mark.textContent = num;
+        const status = document.createElement('span');
+        status.className = 'sr-only';
+        td.append(mark, status);
+        cells.set(`${cat.id}-${num}`, { td, status });
+      }
+    }
+    return cells;
+  }
+
+  const compactCells = buildBoard($('board-compact'), false);
+  const largeCells = buildBoard($('board-large'), true);
+
+  // One stacked image per category; the roll toggles which one is visible.
+  const reelImages = new Map();
+  for (const cat of CATEGORIES) {
+    const img = makeImg(cat, '', 'result__img');
+    img.hidden = true;
+    ui.resultTile.append(img);
+    reelImages.set(cat.id, img);
+    ui.cast.append(makeImg(cat, ''));
+  }
+
+  // ---------- Rendering ----------
+  // While a roll animates, its reserved result stays off the board until it lands.
+  function settledDrawn() {
+    return roll ? game.drawn.filter(id => id !== roll.id) : game.drawn;
+  }
+
+  function render() {
+    ui.welcome.hidden = game !== null;
+    ui.game.hidden = game === null;
+    if (!game) return;
+
+    const settled = settledDrawn();
+    const called = new Set(settled);
+    for (const { id } of COMBOS) {
+      markCell(compactCells.get(id), called.has(id));
+      markCell(largeCells.get(id), called.has(id));
+    }
+
+    const rolling = roll !== null;
+    const complete = !rolling && isComplete(game);
+    ui.btnRoll.disabled = complete;
+    ui.btnRoll.classList.toggle('is-rolling', rolling);
+    for (const btn of [ui.btnRoll, ui.btnCheck, ui.btnNew]) setBusy(btn, rolling);
+    ui.rollLabel.textContent = rolling ? 'Rolling…' : complete ? 'All Called!' : 'Next Roll';
+    ui.done.hidden = !complete;
+
+    if (!rolling) renderResult(settled, complete);
+  }
+
+  function markCell(cell, isCalled) {
+    cell.td.classList.toggle('is-called', isCalled);
+    cell.status.textContent = isCalled ? ', called' : ', not called';
+  }
+
+  // aria-disabled (not disabled) keeps keyboard focus on the button through a roll.
+  function setBusy(btn, busy) {
+    if (busy) btn.setAttribute('aria-disabled', 'true');
+    else btn.removeAttribute('aria-disabled');
+  }
+
+  function isUnavailable(btn) {
+    return btn.disabled || btn.getAttribute('aria-disabled') === 'true';
+  }
+
+  function showCategory(catId) {
+    for (const [id, img] of reelImages) img.hidden = id !== catId;
+  }
+
+  function renderResult(settled, complete) {
+    const id = settled[settled.length - 1];
+    ui.result.classList.remove('is-rolling');
+    ui.result.removeAttribute('aria-busy');
+    ui.resultTab.textContent = complete ? 'Final Call' : 'Now Calling';
+
+    if (!id) {
+      ui.result.classList.add('is-empty');
+      ui.result.classList.remove('has-result');
+      showCategory(null);
+      ui.resultName.textContent = ' '; // hidden, but keeps the label's height so nothing shifts
+      ui.ballNum.textContent = '?';
+      ui.ball.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    const combo = COMBO_BY_ID.get(id);
+    ui.result.classList.remove('is-empty');
+    ui.result.classList.add('has-result');
+    showCategory(combo.cat.id);
+    ui.resultName.textContent = combo.cat.name;
+    ui.ballNum.textContent = combo.num;
+    ui.ball.removeAttribute('aria-hidden');
+  }
+
+  function stampCell(id) {
+    clearStamp();
+    stampedCell = compactCells.get(id).td;
+    stampedCell.classList.add('is-new');
+  }
+
+  function clearStamp() {
+    if (stampedCell) stampedCell.classList.remove('is-new');
+    stampedCell = null;
+  }
+
+  function announce(message) {
+    clearTimeout(announceTimer);
+    ui.announcer.textContent = '';
+    announceTimer = setTimeout(() => { ui.announcer.textContent = message; }, 60);
+  }
+
+  // ---------- Rolling ----------
+  function startRoll() {
+    if (!game || roll || isComplete(game)) return;
+    const pool = remainingIds(game);
+    const id = drawCombination(game); // 1. pick uniformly from what remains
+    saveGame(game);                   // 2. reserve it before any animation runs
+    roll = { id, timers: [] };
+    render();                         // locks the controls; the board waits for the landing
+    beginRollDisplay();
+    animateRoll(COMBO_BY_ID.get(id), pool);
+  }
+
+  function beginRollDisplay() {
+    ui.result.classList.remove('is-empty', 'has-result');
+    ui.result.classList.add('is-rolling');
+    ui.result.setAttribute('aria-busy', 'true');
+    ui.resultTab.textContent = 'Now Calling';
+    showCategory(null);
+    ui.resultName.textContent = 'Rolling…';
+    ui.ballNum.textContent = '';
+    ui.ball.setAttribute('aria-hidden', 'true');
+  }
+
+  function later(fn, ms) {
+    roll.timers.push(setTimeout(fn, ms));
+  }
+
+  function pickOther(options, previous) {
+    if (options.length < 2) return options[0];
+    let next;
+    do { next = options[Math.floor(Math.random() * options.length)]; } while (next === previous);
+    return next;
+  }
+
+  function bump(el, kind) {
+    if (!el.animate || reducedMotion()) return;
+    if (kind === 'tick') {
+      el.animate([{ transform: 'translateY(-35%)', opacity: 0.2 }, { transform: 'none', opacity: 1 }],
+        { duration: 110, easing: 'ease-out' });
+    } else {
+      el.animate([{ transform: 'scale(1.35) rotate(-6deg)' }, { transform: 'scale(.94) rotate(2deg)', offset: 0.55 }, { transform: 'none' }],
+        { duration: 420, easing: 'cubic-bezier(.2,.8,.3,1)' });
+    }
+  }
+
+  // Cycles the image and number reels, then lands on the already-reserved combination.
+  // Frame choices use Math.random because they never affect the result.
+  function animateRoll(final, pool) {
+    if (reducedMotion()) {
+      later(finishRoll, REDUCED_MOTION_DELAY);
+      return;
+    }
+
+    const poolCats = [...new Set(pool.map(id => COMBO_BY_ID.get(id).cat.id))];
+    const poolNums = [...new Set(pool.map(id => COMBO_BY_ID.get(id).num))];
+    const catFrames = poolCats.length > 1 ? poolCats : CATEGORIES.map(cat => cat.id);
+    const numFrames = poolNums.length > 1 ? poolNums : NUMBERS;
+    const start = performance.now();
+    let cat = null;
+    let num = null;
+    let imageLanded = false;
+
+    const tick = () => {
+      const t = performance.now() - start;
+      if (!imageLanded) {
+        if (t >= IMAGE_LANDS_AT) {
+          imageLanded = true;
+          showCategory(final.cat.id);
+          ui.resultName.textContent = final.cat.name;
+          bump(ui.resultTile, 'land');
+        } else {
+          cat = pickOther(catFrames, cat);
+          showCategory(cat);
+          bump(reelImages.get(cat), 'tick');
+        }
+      }
+      if (t >= NUMBER_LANDS_AT) {
+        ui.ballNum.textContent = final.num;
+        ui.result.classList.remove('is-rolling');
+        bump(ui.ballNum, 'land');
+        later(finishRoll, SETTLE_DELAY);
+        return;
+      }
+      num = pickOther(numFrames, num);
+      ui.ballNum.textContent = num;
+      bump(ui.ballNum, 'tick');
+      const progress = t / NUMBER_LANDS_AT;
+      later(tick, 55 + 165 * progress * progress);
+    };
+    tick();
+  }
+
+  function finishRoll() {
+    if (!roll) return;
+    const id = roll.id;
+    const hadFocus = document.activeElement === ui.btnRoll;
+    roll = null;
+    render();
+    stampCell(id);
+
+    const combo = COMBO_BY_ID.get(id);
+    const call = `${combo.cat.name} ${combo.num}.`;
+    announce(isComplete(game)
+      ? `${call} That’s all ${TOTAL}: every combination has been called!`
+      : `${call} ${game.drawn.length} of ${TOTAL} called.`);
+
+    // Next Roll is now disabled for good; keep keyboard users somewhere useful.
+    if (hadFocus && ui.btnRoll.disabled) ui.btnCheck.focus();
+  }
+
+  function cancelRoll() {
+    if (!roll) return;
+    roll.timers.forEach(clearTimeout);
+    roll = null;
+  }
+
+  // ---------- Dialogs ----------
+  function openDialog(dialog, opener) {
+    if (dialog.open) return;
+    returnFocusTo = opener;
+    document.documentElement.classList.add('modal-open');
+    dialog.showModal();
+    const preferred = dialog.querySelector('[autofocus]');
+    if (preferred) preferred.focus();
+  }
+
+  function setupDialog(dialog) {
+    // Close on a tap that both starts and ends on the backdrop (not a drag out of the box).
+    let pressedBackdrop = false;
+    dialog.addEventListener('pointerdown', event => { pressedBackdrop = event.target === dialog; });
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog && pressedBackdrop) dialog.close();
+      pressedBackdrop = false;
+    });
+    dialog.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => dialog.close()));
+    // Escape fires "cancel", which closes the dialog natively and lands here too.
+    dialog.addEventListener('close', () => {
+      document.documentElement.classList.remove('modal-open');
+      const target = returnFocusTo;
+      returnFocusTo = null;
+      if (target && !target.closest('[hidden]')) target.focus();
+    });
+  }
+
+  setupDialog(ui.dlgCheck);
+  setupDialog(ui.dlgConfirm);
+
+  // ---------- Events ----------
+  ui.btnStart.addEventListener('click', () => {
+    game = createGame();
+    saveGame(game);
+    render();
+    ui.btnRoll.focus();
+    announce('Game started. Tap Next Roll for the first call.');
+  });
+
+  ui.btnRoll.addEventListener('click', () => {
+    if (isUnavailable(ui.btnRoll)) return;
+    startRoll();
+  });
+
+  ui.btnCheck.addEventListener('click', () => {
+    if (!game || isUnavailable(ui.btnCheck)) return;
+    openDialog(ui.dlgCheck, ui.btnCheck);
+  });
+
+  ui.btnNew.addEventListener('click', () => {
+    if (!game || isUnavailable(ui.btnNew)) return;
+    openDialog(ui.dlgConfirm, ui.btnNew);
+  });
+
+  ui.btnConfirmNew.addEventListener('click', () => {
+    cancelRoll();
+    game = createGame();
+    saveGame(game);
+    clearStamp();
+    returnFocusTo = ui.btnRoll;
+    ui.dlgConfirm.close();
+    render();
+    announce(`New game started. All ${TOTAL} combinations are available.`);
+  });
+
+  // Stretch-and-squash feedback. Capture phase runs before a handler can mark the button busy.
+  document.addEventListener('click', event => {
+    const btn = event.target.closest('.btn, .pbtn, .xbtn');
+    if (!btn || isUnavailable(btn) || reducedMotion()) return;
+    btn.classList.remove('is-squish');
+    void btn.offsetWidth; // restart the animation
+    btn.classList.add('is-squish');
+  }, true);
+
+  document.addEventListener('animationend', event => {
+    if (event.animationName === 'squish') event.target.classList.remove('is-squish');
+    if (event.animationName === 'stamp') clearStamp();
+  });
+
+  // ---------- Start up ----------
+  const stored = loadGame();
+  if (stored.status === 'ok') {
+    game = stored.game;
+  } else if (stored.status === 'invalid') {
+    game = createGame();
+    saveGame(game);
+  }
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+
+services:
+  worker:
+    container_name: christmas_bingo_display
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    stdin_open: true
+    tty: true
+    init: true
+
